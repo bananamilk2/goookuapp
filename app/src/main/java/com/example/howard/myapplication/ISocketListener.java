@@ -6,7 +6,7 @@ import org.java_websocket.handshake.ServerHandshake;
  * Created by Howard on 2017/8/23.
  */
 public interface ISocketListener {
-    void onReceiveMessage(String msg);
+    void onReceiveMessage(WechatUserBean msg);
 
     void onSocketClose(int code, String reason, boolean remote);
 

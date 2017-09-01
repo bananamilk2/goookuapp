@@ -2,9 +2,12 @@ package com.example.howard.myapplication;
 
 import android.util.Log;
 
+import com.google.gson.Gson;
+
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONObject;
 
 import java.net.URI;
 import java.util.Map;
@@ -34,7 +37,7 @@ public class WebClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshakedata) {
-        Log.i("WebClient", "Open Connection");
+        Log.i("howard", "Open Connection");
         if(null != mISocketListener){
             mISocketListener.onSocketOpen(handshakedata);
         }
@@ -42,15 +45,17 @@ public class WebClient extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
-        Log.i("WebClient", "Receive Message = " + message);
+        Log.i("howard", "Receive Message = " + message);
+        Gson json = new Gson();
+        WechatUserBean bean = json.fromJson(message, WechatUserBean.class);
         if(null != mISocketListener){
-            mISocketListener.onReceiveMessage(message);
+            mISocketListener.onReceiveMessage(bean);
         }
     }
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        Log.i("WebClient", "Close Connection");
+        Log.i("howard", "Close Connection");
         if(null != mISocketListener){
             mISocketListener.onSocketClose(code, reason, remote);
         }
@@ -58,7 +63,7 @@ public class WebClient extends WebSocketClient {
 
     @Override
     public void onError(Exception ex) {
-        Log.i("WebClient", "Error Connection");
+        Log.i("howard", "Error Connection");
         if(null != mISocketListener){
             mISocketListener.onSocketError(ex);
         }

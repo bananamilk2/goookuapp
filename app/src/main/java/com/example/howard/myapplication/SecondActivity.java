@@ -1,17 +1,13 @@
 package com.example.howard.myapplication;
 
 import android.content.Context;
-import android.content.Intent;
-import android.graphics.BitmapFactory;
 import android.graphics.PointF;
-import android.media.Image;
 import android.net.Uri;
-import android.os.AsyncTask;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PersistableBundle;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
@@ -20,37 +16,32 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.chad.library.adapter.base.animation.ScaleInAnimation;
 import com.easyandroidanimations.library.PuffOutAnimation;
 import com.facebook.drawee.view.SimpleDraweeView;
-import com.facebook.imagepipeline.common.ImageDecodeOptions;
 
 import org.java_websocket.handshake.ServerHandshake;
 
-import java.io.File;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.refactor.lib.colordialog.ColorDialog;
-import io.github.rockerhieu.emojiconize.Emojiconize;
 import it.gmariotti.recyclerview.adapter.ScaleInAnimatorAdapter;
 
-public class MainActivity extends AppCompatActivity implements IImagesAdapterCallback{
+/**
+ * Created by Howard on 2017/8/29.
+ */
+public class SecondActivity extends AppCompatActivity{
 
     private RecyclerView mRecyclerView;
     private List<String> mDatas;
     private HomeAdapter mAdapter;
     private ImageView mConnectCode;
-    private ImageView mScaleImage;
+    private SimpleDraweeView mScaleImage;
 
     public static final int ITEM_TYPE_TEXT = 0;
     public static final int ITEM_TYPE_IMAGE = 1;
@@ -74,36 +65,21 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
     };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-//        Emojiconize.activity(this).go();
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//        mRecyclerView.setLayoutManager(layout);
-
+        mScaleImage = (SimpleDraweeView) findViewById(R.id.scale_image);
         initData();
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler);
         mConnectCode = (ImageView)findViewById(R.id.connectcode);
-        mScaleImage = (ImageView) findViewById(R.id.scale_image);
+
         mRecyclerView.setLayoutManager(new ScrollSpeedLinearLayoutManager(this));
 //        mRecyclerView.setAdapter(mAdapter = new HomeAdapter());
         mAdapter = new HomeAdapter();
         ScaleInAnimatorAdapter animatorAdapter = new ScaleInAnimatorAdapter(mAdapter, mRecyclerView);
         mRecyclerView.setAdapter(animatorAdapter);
-//        mRecyclerView.setItemAnimator(new SlideScaleInOutRightItemAnimator(mRecyclerView));
 
-
-//        mAdapter.setOnItemClickListener(new onItemClickListener() {
-//            @Override
-//            public void onItemClick(View view, int position) {
-//                Toast.makeText(MainActivity.this,"onClick"+position,Toast.LENGTH_SHORT).show();
-//            }
-//
-//            @Override
-//            public void onItemLongClick(View view, int position) {
-//                Toast.makeText(MainActivity.this,"onLongClick"+position,Toast.LENGTH_SHORT).show();
-//            }
-//        });
-
+//        mHandler.sendEmptyMessageDelayed(3, 3000);
 
         mHandler.post(new Runnable() {
             @Override
@@ -118,45 +94,6 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
                 }
             }
         });
-
-//        mHandler.sendEmptyMessageDelayed(0, 1000);
-    }
-
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-//        DisplayMetrics dm = new DisplayMetrics();
-//        wm.getDefaultDisplay().getMetrics(dm);
-//        mParams = new RelativeLayout.LayoutParams(dm.widthPixels/2, dm.heightPixels/2);
-//    }
-
-    private WebClient mWebClient;
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if(mWebClient != null)
-            mWebClient.close();
-        mHandler.removeCallbacksAndMessages(null);
-    }
-
-    public String TAG = "howard";
-
-    @Override
-    public void onEnterImageDetails(String sharedImageTransitionName, String imageUrl, ImageView image, Image imageModel) {
-        Log.i(TAG, "imagefile = " + imageUrl);
-        int[] screenLocation = new int[2];
-
-        image.getLocationInWindow(screenLocation);
-        Log.i(TAG, "location in window = " + screenLocation[0] + "__" + screenLocation[1]);
-        Intent startIntent = ImageDetailsActivity.getStartIntent(this, imageUrl,
-                screenLocation[0],
-                screenLocation[1],
-                image.getWidth(),
-                image.getHeight(),
-                image.getScaleType());
-        startActivity(startIntent);
     }
 
     class MySocketListener implements ISocketListener{
@@ -195,19 +132,6 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
         }
     }
 
-    public void addData(View view){
-//        mRealData.add(mDatas.get(position++));
-        MessageBean msg = new MessageBean();
-        msg.setText(mDatas.get(position++));
-        msg.setType(ITEM_TYPE_TEXT);
-        msg.setUserImg(userImg);
-        msg.setTimestamp(getCurrentTime());
-        mAdapter.addItem(mAdapter.getItemCount(),msg);
-        if(mAdapter.getItemCount() > 0) {
-            mRecyclerView.smoothScrollToPosition(mAdapter.getItemCount() - 1);
-        }
-    }
-
     private void addData(WechatUserBean data){
         MessageBean msg = new MessageBean();
         msg.setType(ITEM_TYPE_TEXT);
@@ -228,27 +152,42 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
         }
     }
 
-    private RelativeLayout.LayoutParams mParams;
+    public void addData(View view){
+//        mRealData.add(mDatas.get(position++));
+       showImage(null,3);
+    }
+
+    private WebClient mWebClient;
+
+
+    public String TAG = "howard";
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if(mWebClient != null)
+            mWebClient.close();
+        mHandler.removeCallbacksAndMessages(null);
+    }
 
     private void showImage(final String url, int duration){
-        Log.i(TAG, "show image = " + url);
-
-        mScaleImage.setBackgroundResource(R.mipmap.pic);
+        Log.i(TAG, "show image = " + Thread.currentThread().getName());
+        mScaleImage.setImageURI(Uri.parse(url));
         RelativeLayout.LayoutParams pa = (RelativeLayout.LayoutParams) mScaleImage.getLayoutParams();
-        pa.height = 500;
-        pa.width = 500;
+        pa.height = 530;
+        pa.width = 530;
+        mScaleImage.setVisibility(View.VISIBLE);
         mScaleImage.setLayoutParams(pa);
 
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 new PuffOutAnimation(mScaleImage).animate();
+//                mScaleImage.setVisibility(View.GONE);
             }
         }, duration * 1000);
 
     }
-
-    private String userImg = "http://wx3.sinaimg.cn/mw600/005Dt8Kogy1firm3q0vrej30hs0noq5m.jpg";
 
     protected void initData() {
         mDatas = new ArrayList();
@@ -278,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
             switch (viewType){
                 case ITEM_TYPE_TEXT:
                     holder = new MyViewHolder(LayoutInflater.from(
-                            MainActivity.this).inflate(R.layout.recyclerview_item_text, parent,
+                            SecondActivity.this).inflate(R.layout.recyclerview_item_text, parent,
                             false));
                     break;
                 case ITEM_TYPE_IMAGE:
@@ -445,7 +384,7 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
         void  onItemLongClick(View view,int position);
     }
 
-    class ScrollSpeedLinearLayoutManager extends LinearLayoutManager{
+    class ScrollSpeedLinearLayoutManager extends LinearLayoutManager {
         private float MILLISECONDS_PER_INCH = 1f;
         private Context context;
         public ScrollSpeedLinearLayoutManager(Context context) {
@@ -496,5 +435,3 @@ public class MainActivity extends AppCompatActivity implements IImagesAdapterCal
         return format;
     }
 }
-
-
