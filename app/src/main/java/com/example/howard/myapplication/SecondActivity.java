@@ -1,10 +1,12 @@
 package com.example.howard.myapplication;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.PointF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.os.PersistableBundle;
 import android.support.v7.app.AppCompatActivity;
@@ -21,6 +23,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.easyandroidanimations.library.PuffOutAnimation;
+import com.example.howard.myapplication.eventloop.BaseMessage;
+import com.example.howard.myapplication.eventloop.IEventHandler;
+import com.example.howard.myapplication.eventloop.PostHandler;
 import com.facebook.drawee.view.SimpleDraweeView;
 
 import org.java_websocket.handshake.ServerHandshake;
@@ -35,7 +40,7 @@ import it.gmariotti.recyclerview.adapter.ScaleInAnimatorAdapter;
 /**
  * Created by Howard on 2017/8/29.
  */
-public class SecondActivity extends AppCompatActivity{
+public class SecondActivity extends AppCompatActivity implements IEventHandler {
 
     private RecyclerView mRecyclerView;
     private List<String> mDatas;
@@ -48,30 +53,33 @@ public class SecondActivity extends AppCompatActivity{
     public static final int ITEM_TYPE_TEXT_IMAGE = 2;
     public static final int SHOW_IMAGE = 3;
 
-    public Handler mHandler = new Handler(){
+    public Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            if(msg.what == 0){
+            if (msg.what == 0) {
                 mConnectCode.setVisibility(View.VISIBLE);
                 mHandler.sendEmptyMessageDelayed(1, 5000);
-            }else if(msg.what == 1){
+            } else if (msg.what == 1) {
                 mConnectCode.setVisibility(View.INVISIBLE);
                 mHandler.sendEmptyMessageDelayed(0, 5000);
-            }else if(msg.what == SHOW_IMAGE){
-                showImage((String)msg.obj, 4);
+            } else if (msg.what == SHOW_IMAGE) {
+                showImage((String) msg.obj, 4);
             }
         }
     };
+
+    private PostHandler mPostHandler;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mPostHandler = new PostHandler(this, Looper.getMainLooper(), 3000);
         mScaleImage = (SimpleDraweeView) findViewById(R.id.scale_image);
         initData();
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler);
-        mConnectCode = (ImageView)findViewById(R.id.connectcode);
+        mConnectCode = (ImageView) findViewById(R.id.connectcode);
 
         mRecyclerView.setLayoutManager(new ScrollSpeedLinearLayoutManager(this));
 //        mRecyclerView.setAdapter(mAdapter = new HomeAdapter());
@@ -89,14 +97,38 @@ public class SecondActivity extends AppCompatActivity{
                     mWebClient.connectBlocking();
                     mWebClient.connect();
 
-                }catch (Exception e){
+                } catch (Exception e) {
                     Log.e("MainActivity", e.toString());
                 }
             }
         });
     }
 
-    class MySocketListener implements ISocketListener{
+    @Override
+    public void handlerEvent(Object msg) {
+        final MessageBean bean = (MessageBean) msg;
+
+        mAdapter.addItem(mAdapter.getItemCount(), (MessageBean) msg);
+        if (mAdapter.getItemCount() >= 0) {
+            mRecyclerView.smoothScrollToPosition(mAdapter.getItemCount() - 1);
+        }
+
+
+        String text = bean.getText();
+        LogUtils.hLog().i(text + "__" + "rose".equals(text));
+
+        if (null != text && "rose".equals(text)) {
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    switchActivity();
+                }
+            }, 100);
+        }
+
+    }
+
+    class MySocketListener implements ISocketListener {
 
         @Override
         public void onReceiveMessage(WechatUserBean msg) {
@@ -126,13 +158,25 @@ public class SecondActivity extends AppCompatActivity{
         }
     }
 
-    public void scroll(View view){
-        if(mAdapter.getItemCount() > 0) {
-            mRecyclerView.smoothScrollToPosition(mAdapter.getItemCount() - 1);
-        }
+    public void scroll(View view) {
+//        if(mAdapter.getItemCount() > 0) {
+//            mRecyclerView.smoothScrollToPosition(mAdapter.getItemCount() - 1);
+//        }
+        switchActivity();
+
     }
 
-    private void addData(WechatUserBean data){
+    private void switchActivity() {
+        Intent intent = new Intent(SecondActivity.this, VideoActivity.class);
+        intent.putExtra("fromUser", "呵呵哒");
+        intent.putExtra("toUser", "么么哒");
+//        intent.putExtra("fromAvator", null);
+//        intent.putExtra("toAvator", bean.getUserImg());
+        startActivity(intent);
+
+    }
+
+    private void addData(final WechatUserBean data) {
         MessageBean msg = new MessageBean();
         msg.setType(ITEM_TYPE_TEXT);
         msg.setText(data.text);
@@ -140,21 +184,20 @@ public class SecondActivity extends AppCompatActivity{
         msg.setUserImg(data.head);
         msg.setTimestamp(getCurrentTime());
         msg.setImage(data.image);
-        mAdapter.addItem(mAdapter.getItemCount(),msg);
-        if(mAdapter.getItemCount() > 0) {
-            mRecyclerView.smoothScrollToPosition(mAdapter.getItemCount() - 1);
-        }
-        if(data.image != null) {
-            Message ms = Message.obtain();
-            ms.what = SHOW_IMAGE;
-            ms.obj = data.image;
-            mHandler.sendMessageDelayed(ms, 1000);
-        }
+
+        mPostHandler.enqueue(msg);
+
+//        if(data.image != null) {
+//            Message ms = Message.obtain();
+//            ms.what = SHOW_IMAGE;
+//            ms.obj = data.image;
+//            mHandler.sendMessageDelayed(ms, 1000);
+//        }
     }
 
-    public void addData(View view){
+    public void addData(View view) {
 //        mRealData.add(mDatas.get(position++));
-       showImage(null,3);
+        showImage(null, 3);
     }
 
     private WebClient mWebClient;
@@ -165,12 +208,12 @@ public class SecondActivity extends AppCompatActivity{
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mWebClient != null)
+        if (mWebClient != null)
             mWebClient.close();
         mHandler.removeCallbacksAndMessages(null);
     }
 
-    private void showImage(final String url, int duration){
+    private void showImage(final String url, int duration) {
         Log.i(TAG, "show image = " + Thread.currentThread().getName());
         mScaleImage.setImageURI(Uri.parse(url));
         RelativeLayout.LayoutParams pa = (RelativeLayout.LayoutParams) mScaleImage.getLayoutParams();
@@ -202,19 +245,20 @@ public class SecondActivity extends AppCompatActivity{
 
     class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.MyViewHolder> {
         private IImagesAdapterCallback mImageCallback;
-        public HomeAdapter(IImagesAdapterCallback callback){
+
+        public HomeAdapter(IImagesAdapterCallback callback) {
             mImageCallback = callback;
         }
 
-        public HomeAdapter(){
+        public HomeAdapter() {
 
         }
 
         @Override
-        public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType){
-            Log.d("howard","onCreateViewHolder: position = " + position + " view type = " + viewType);
+        public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            Log.d("howard", "onCreateViewHolder: position = " + position + " view type = " + viewType);
             MyViewHolder holder = null;
-            switch (viewType){
+            switch (viewType) {
                 case ITEM_TYPE_TEXT:
                     holder = new MyViewHolder(LayoutInflater.from(
                             SecondActivity.this).inflate(R.layout.recyclerview_item_text, parent,
@@ -237,7 +281,7 @@ public class SecondActivity extends AppCompatActivity{
         //复写该方法决定返回哪种item类型
         @Override
         public int getItemViewType(int position) {
-            Log.d("howard","getItemViewType: position = " + position + " type = " + mRealData.get(position).getType());
+            Log.d("howard", "getItemViewType: position = " + position + " type = " + mRealData.get(position).getType());
             return mRealData.get(position).getType();
         }
 
@@ -250,35 +294,35 @@ public class SecondActivity extends AppCompatActivity{
             for (int i = 0; i < string.length(); i++) {
                 // 取出每一个字符
                 char c = string.charAt(i);
-                if(c < 256){   //ASC11表中的字符码值不够4位,补00
+                if (c < 256) {   //ASC11表中的字符码值不够4位,补00
                     unicode.append("\\u00");
-                }
-                else {
+                } else {
                     unicode.append("\\u");
                 }
                 // 转换为unicode
                 unicode.append(Integer.toHexString(c));
             }
-            Log.i("howard", "unicodetostring = "+unicode.toString());
+            Log.i("howard", "unicodetostring = " + unicode.toString());
             return unicode.toString();
         }
 
         @Override
-        public void onBindViewHolder(final MyViewHolder holder, final int position){
-            Log.d("howard","onBindViewHolder: position = " + position);
+        public void onBindViewHolder(final MyViewHolder holder, final int position) {
+            Log.d("howard", "onBindViewHolder: position = " + position);
 //            holder.userText.setText(string2Unicode(mRealData.get(position).getText()));
 
-            if(mRealData.get(position).getText() != null) {
+            if (mRealData.get(position).getText() != null) {
                 holder.userText.setText(mRealData.get(position).getText());
                 holder.userText.setVisibility(View.VISIBLE);
             }
+
 
 //            if (holder instanceof CommentFirstHolder) {
 //
 //            } else if (holder instanceof CommentSecondHolder) {
 //
 //            }
-            if(mRealData.get(position).getImage() != null) {
+            if (mRealData.get(position).getImage() != null) {
                 Uri uri = Uri.parse(mRealData.get(position).getImage());
                 holder.image.setImageURI(uri);
                 holder.image.setScaleType(ImageView.ScaleType.FIT_START);
@@ -291,7 +335,6 @@ public class SecondActivity extends AppCompatActivity{
             holder.userName.setText(mRealData.get(position).getUserName());
 
 
-
 //            ImageView userImg;
 //            TextView userName;
 //            TextView timestamp;
@@ -302,8 +345,8 @@ public class SecondActivity extends AppCompatActivity{
 //
 //            linearParams.width = 30
 
-            if(onItemClickListener != null){
-                holder.itemView.setOnClickListener(new View.OnClickListener(){
+            if (onItemClickListener != null) {
+                holder.itemView.setOnClickListener(new View.OnClickListener() {
 
                     @Override
                     public void onClick(View view) {
@@ -322,12 +365,11 @@ public class SecondActivity extends AppCompatActivity{
 //                        }
 
 
-
                     }
                 });
             }
 
-            holder.itemView.setOnLongClickListener(new View.OnLongClickListener(){
+            holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
 
                 @Override
                 public boolean onLongClick(View view) {
@@ -337,11 +379,13 @@ public class SecondActivity extends AppCompatActivity{
                     return false;
                 }
             });
+
+
         }
 
-        public void addItem(int position, MessageBean data){
+        public void addItem(int position, MessageBean data) {
             Log.i("howard", "addItem: position =  " + position + "  data = " + data.toString());
-            mRealData.add(position,data);
+            mRealData.add(position, data);
             notifyItemInserted(position);
         }
 
@@ -372,21 +416,24 @@ public class SecondActivity extends AppCompatActivity{
 
 
         private onItemClickListener onItemClickListener;
-        public void setOnItemClickListener(onItemClickListener onItemClickListener){
-            this.onItemClickListener=onItemClickListener;
+
+        public void setOnItemClickListener(onItemClickListener onItemClickListener) {
+            this.onItemClickListener = onItemClickListener;
         }
 
 
     }
 
-    interface onItemClickListener{
-        void onItemClick(View view ,int position);
-        void  onItemLongClick(View view,int position);
+    interface onItemClickListener {
+        void onItemClick(View view, int position);
+
+        void onItemLongClick(View view, int position);
     }
 
     class ScrollSpeedLinearLayoutManager extends LinearLayoutManager {
         private float MILLISECONDS_PER_INCH = 1f;
         private Context context;
+
         public ScrollSpeedLinearLayoutManager(Context context) {
             super(context);
             this.context = context;
@@ -427,7 +474,7 @@ public class SecondActivity extends AppCompatActivity{
         }
     }
 
-    public String getCurrentTime(){
+    public String getCurrentTime() {
         long time = System.currentTimeMillis();
         SimpleDateFormat sdf = new SimpleDateFormat("MM-dd HH:mm");
         String format = sdf.format(time);

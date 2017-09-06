@@ -14,8 +14,8 @@ public class MessageBean {
     private int time;               //霸屏时间
     private int giftType;           //礼物类型
     private String giftUser;        //
-    private String image;           //用户发送的消息
-    private String text;            //用户发送的图片
+    private String image;           //用户发送的图片
+    private String text;            //用户发送的消息
     private String timestamp;       //消息时间戳
 
     public MessageBean() {

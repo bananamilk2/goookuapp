@@ -23,7 +23,7 @@ android {
 }
 
 dependencies {
-    //    provided fileTree(include: ['*.jar'], dir: 'libs')
+    provided fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.github.glomadrian:Grav:1.1'
@@ -37,5 +37,7 @@ dependencies {
     compile 'io.github.rockerhieu:emojiconize:1.0.0'
     compile 'com.github.andyxialm:ColorDialog:1.0.0'
     compile 'com.github.2359media:EasyAndroidAnimations:0.8'
+    compile 'com.makeramen:roundedimageview:2.2.1'
+    compile files('libs/universal-image-loader-1.9.5.jar')
 }
 
